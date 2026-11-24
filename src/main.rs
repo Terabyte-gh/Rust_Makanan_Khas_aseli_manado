@@ -2,6 +2,7 @@ use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
 use serde::Serialize;
 use serde_json::{json, Value};
 use sqlx::{postgres::PgPoolOptions, FromRow, PgPool};
+use axum::extract::Path;
 
 #[derive(Serialize, FromRow)]
 struct Produk {
