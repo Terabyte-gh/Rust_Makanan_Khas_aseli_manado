@@ -3,6 +3,10 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use sqlx::{postgres::PgPoolOptions, FromRow, PgPool};
 use axum::extract::Path;
+use axum::extract::FromRef;
+use axum::response::Html;
+use std::{collections::HashMap, sync::Arc};
+use tera::{Context, Tera};
 
 #[derive(Serialize, FromRow)]
 struct Produk {
@@ -39,6 +43,7 @@ async fn get_produk(State(db): State<PgPool>) -> Result<Json<Vec<Produk>>, Statu
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL belum di-set");
 
     let db = PgPoolOptions::new()
