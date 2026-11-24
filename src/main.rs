@@ -56,3 +56,29 @@ async fn main() {
     println!("Server jalan di http://localhost:3777");
     axum::serve(listener, app).await.unwrap();
 }
+
+async fn get_produk_by_id(
+    State(db): State<PgPool>,
+    Path(id): Path<i64>,
+) -> Result<Json<Produk>, (StatusCode, Json<Value>)> {
+    let produk = sqlx::query_as::<_, Produk>(
+        "SELECT id_makanan::bigint AS id_makanan, makanan,
+                harga::bigint AS harga, stok::bigint AS stok, deskripsi
+         FROM makanan WHERE id_makanan = $1",
+    )
+    .bind(id)
+    .fetch_optional(&db)
+    .await
+    .map_err(|e| {
+        eprintln!("[error] {e}");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"status": "error", "message": "Terjadi kesalahan pada server"})),
+        )
+    })?;
+
+    produk.map(Json).ok_or((
+        StatusCode::NOT_FOUND,
+        Json(json!({"status": "error", "message": "Produk tidak ditemukan"})),
+    ))
+}
