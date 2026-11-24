@@ -50,6 +50,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/status", get(status))
         .route("/api/produk", get(get_produk))
+        .route("/api/produk/{id}", get(get_produk_by_id))
         .with_state(db);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3777").await.unwrap();
@@ -82,3 +83,5 @@ async fn get_produk_by_id(
         Json(json!({"status": "error", "message": "Produk tidak ditemukan"})),
     ))
 }
+
+
