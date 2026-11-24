@@ -5,8 +5,8 @@ use sqlx::{postgres::PgPoolOptions, FromRow, PgPool};
 use axum::extract::Path;
 use axum::extract::FromRef;
 use axum::response::Html;
-use std::{collections::HashMap, sync::Arc};
-use tera::{Context, Tera};
+use std::sync::Arc;
+use tera::{Context, Kwargs, State as TeraState, Tera};
 
 #[derive(Serialize, FromRow)]
 struct Produk {
@@ -41,6 +41,64 @@ async fn get_produk(State(db): State<PgPool>) -> Result<Json<Vec<Produk>>, Statu
     Ok(Json(produk))
 }
 
+#[derive(Clone)]
+struct AppState {
+    db: PgPool,
+    tera: Arc<Tera>,
+}
+
+impl FromRef<AppState> for PgPool {
+    fn from_ref(s: &AppState) -> Self {
+        s.db.clone()
+    }
+}
+impl FromRef<AppState> for Arc<Tera> {
+    fn from_ref(s: &AppState) -> Self {
+        s.tera.clone()
+    }
+}
+
+fn rupiah(value: i64, _: Kwargs, _: &TeraState) -> String {
+    let digits = value.to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            out.push('.');
+        }
+        out.push(c);
+    }
+    let out: String = out.chars().rev().collect();
+    format!("Rp {out}")
+}
+
+async fn index(
+    State(db): State<PgPool>,
+    State(tera): State<Arc<Tera>>,
+) -> Result<Html<String>, StatusCode> {
+    let produk = sqlx::query_as::<_, Produk>(
+        "SELECT id_makanan::bigint AS id_makanan, makanan,
+                harga::bigint AS harga, stok::bigint AS stok, deskripsi
+         FROM makanan ORDER BY id_makanan",
+    )
+    .fetch_all(&db)
+    .await
+    .map_err(|e| {
+        eprintln!("[error] {e}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let mut ctx = Context::new();
+    ctx.insert("app_name", "Makanan Khas Aseli Manado");
+    ctx.insert("produk", &produk);
+
+    let html = tera.render("index.html", &ctx).map_err(|e| {
+        eprintln!("[error] {e}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Html(html))
+}
+
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
@@ -52,11 +110,18 @@ async fn main() {
         .await
         .expect("Gagal konek ke PostgreSQL");
 
+    let mut tera = Tera::new();
+        tera.load_from_glob("templates/**/*").expect("Gagal load template");
+        tera.register_filter("rupiah", rupiah);
+
+    let state = AppState { db, tera: Arc::new(tera) };
+
     let app = Router::new()
+        .route("/", get(index))
         .route("/api/status", get(status))
         .route("/api/produk", get(get_produk))
         .route("/api/produk/{id}", get(get_produk_by_id))
-        .with_state(db);
+        .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3777").await.unwrap();
     println!("Server jalan di http://localhost:3777");
