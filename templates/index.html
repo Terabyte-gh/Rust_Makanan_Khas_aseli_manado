@@ -1,0 +1,44 @@
+{% include "partials/head.html" %}
+
+  <header class="border-b border-stone-200 bg-white">
+    <nav class="px-6 lg:px-10 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
+        <span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-700"></span>
+        {{ app_name }}
+      </a>
+      <div class="flex items-center gap-6 text-sm text-stone-600">
+        <a href="/" class="hover:text-stone-900">Dashboard</a>
+        {% if is_admin %}
+          <form action="/admin/logout" method="post"><button class="hover:text-stone-900">Logout Admin</button></form>
+        {% else %}
+          <a href="/admin/login" class="hover:text-stone-900">Login Admin</a>
+        {% endif %}
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="px-6 lg:px-10 pt-16 pb-12">
+      <p class="text-xs font-medium uppercase tracking-widest text-amber-700">Kuliner Sulawesi Utara</p>
+      <h1 class="mt-3 text-4xl sm:text-5xl font-semibold tracking-tight">{{ app_name }}</h1>
+      <p class="mt-4 max-w-2xl text-stone-600 leading-relaxed">
+        Kumpulan hidangan khas Manado yang diolah dari resep yang sudah turun-temurun. jadi yang moba pesan pesan jo neh.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="#produk" class="inline-flex items-center rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-800">Lihat Produk</a>
+        <a href="/api/produk" class="inline-flex items-center rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:border-stone-400">Endpoint produk</a>
+      </div>
+    </section>
+
+    <section id="produk" class="px-6 lg:px-10 py-8">
+      {% for p in produk %}
+        <div class="border-b border-stone-200 py-3">
+          <h3 class="font-medium">{{ p.makanan }}</h3>
+          <p class="text-sm text-stone-600">{{ p.deskripsi }}</p>
+          <strong>{{ p.harga | rupiah }}</strong> · stok {{ p.stok }}
+        </div>
+      {% endfor %}
+    </section>
+  </main>
+
+{% include "partials/footer.html" %}
